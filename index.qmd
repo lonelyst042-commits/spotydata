@@ -1,0 +1,196 @@
+---
+title: "Most Streamed Spotify Songs 2023"
+author: "Nayelis Alvarez"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: cargar-bibliotecas
+#| echo: false
+#| warning: false
+#| message: false
+
+# Instalación conjunta (toma más tiempo)
+#install.packages("tidyverse")
+
+# Instalación de paquetes individuales
+#install.packages("ggplot2")
+#install.packages("dplyr")
+#install.packages("DT")
+#install.packages("plotly")
+
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(DT)
+library(plotly)
+```
+
+# Infomación del conjunto de datos
+
+## Nombre del conjunto de datos
+
+Songs Database Fuente: https://www.kaggle.com/datasets/nelgiriyewithana/top-spotify-songs-2023
+
+## Descripción
+
+Este conjunto de datos contiene información sobre canciones y artistas que fueron los mas escuchados en la plataforma Spotify para el año 2023, así como su entrada en charts de Deezer, Apple y Chazam.
+
+## Cantidad de filas y columnas
+
+Filas: 953 / Columnas:24
+
+```{r}
+#| label: cargar-datos
+#| echo: false
+#| warning: false
+#| message: false
+
+songs <- read_csv("spotify-2023.csv",  locale = locale(encoding = "Latin1"))
+
+```
+
+# Introducción
+
+Los gráficos del dataset se hicieron escogiendo y agrupando los datos que se consideraron mas llamativos y con base a esto se crearon tres diferentes tipos de gráficos para facilitar su lectura.
+
+# Tabla de datos
+
+```{r}
+#| label: tabla-datos
+#| code-fold: true
+
+songs |>
+  datatable(
+    options = list(
+      pageLength = 10,
+      searching = TRUE,
+      ordering = TRUE
+    ))
+```
+
+# Distribución del BPM de las canciones.
+
+```{r}
+#| label: distribucion-bpm
+#| echo: false
+#| warning: false
+#| message: false
+bpm <- songs |>
+  count(bpm, track_name)
+```
+
+Gráfico 1: Histograma del BPM de las canciones.
+
+```{r}
+#| label: grafico-bpm
+#| echo: false
+#| message: false
+#| warning: false
+
+grafico_bpm <- songs |> 
+  ggplot(aes(x = bpm)) +
+  geom_histogram(
+    bins = 20,
+    fill = "green",
+    color = "black"
+  ) +
+  labs(
+    title = "Distribución del BPM",
+    x = "BPM",
+    y = "Cantidad"
+  )
+
+ggplotly(grafico_bpm)
+```
+
+# Distribución de canciones por tonalidad.
+
+```{r}
+#| label: distribucion-key
+#| echo: false
+#| message: false
+#| warning: false
+
+tonalidad <- songs |>
+  count(key)
+```
+
+Gráfico 2: Barras de la cantidad de canciones por tonalidad.
+
+```{r}
+#| label: grafico-key
+#| echo: false
+#| message: false
+#| warning: false
+
+grafico_key <- songs |>
+  ggplot(aes(x = key, fill = key)) +
+  geom_bar() +
+  labs(
+    title = "Cantidad de canciones por tonalidad musical",
+    x = "Tonalidad musical",
+    y = "Cantidad de canciones"
+  ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set3")
+
+plotly::ggplotly(grafico_key)
+```
+
+# Distribución de canciones bailables vs energéticas.
+
+```{r}
+#| label: bailable-vs-energetica
+#| echo: false
+#| message: false
+#| warning: false
+
+dance_songs <- songs |>
+  rename(
+    danceability = `danceability_%`,
+    energy = `energy_%`,
+    artist.name = `artist(s)_name`,
+    streams = streams,
+    track = track_name
+  )
+dance <- dance_songs |> 
+  count(danceability, energy)
+ dance <- dance_songs |> 
+group_by(danceability) |>
+  summarize(total_canciones = n())
+```
+
+Gráfico 3: Diagrama de dispersión de las canciones bailables según su modo.
+
+```{r}
+#| label: dispersion-bailable
+#| echo: false
+#| message: false
+#| warning: false
+grafico_disp <- dance_songs |>
+  ggplot(aes(
+    x = danceability,
+    y = energy,
+    color = mode,
+    text = paste(
+      "Canción:", track,
+      "<br>Artista:", artist.name,
+      "<br>Streams:", streams
+    )
+  )) +
+  geom_point(size = 3, alpha = 0.7) +
+  labs(
+    title = "Danceability vs Energy de las canciones",
+    x = "Danceability (%)",
+    y = "Energy (%)",
+    color = "Modo Musical"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c(
+    "Major" = "green",
+    "Minor" = "red"))
+
+ggplotly(grafico_disp, tooltip = "text")
+```
